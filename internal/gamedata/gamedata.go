@@ -2,6 +2,7 @@ package gamedata
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
@@ -19,7 +20,7 @@ import (
 )
 
 const (
-	schemaVersion = 3
+	schemaVersion = 5
 	balanceName   = "GameBalance"
 	English       = "en"
 )
@@ -35,12 +36,16 @@ var (
 )
 
 type Catalog struct {
-	Schema  int                          `json:"schema"`
-	Source  string                       `json:"source"`
-	IDs     []string                     `json:"ids"`
-	Items   []string                     `json:"items"`
-	Names   map[string]map[string]string `json:"names"`
-	Aliases map[string]string            `json:"aliases"`
+	Schema   int                          `json:"schema"`
+	Source   string                       `json:"source"`
+	IDs      []string                     `json:"ids"`
+	Items    []string                     `json:"items"`
+	Names    map[string]map[string]string `json:"names"`
+	Aliases  map[string]string            `json:"aliases"`
+	Defs     map[string]ItemDef           `json:"defs,omitempty"`
+	Storages map[string]int               `json:"storages,omitempty"`
+
+	IconDir string `json:"-"`
 
 	known map[string]bool
 	items map[string]bool
@@ -50,6 +55,7 @@ type Entry struct {
 	ID     string `json:"id"`
 	Name   string `json:"name"`
 	IsItem bool   `json:"isItem"`
+	Icon   string `json:"icon"`
 }
 
 func ResourcesPath(gameDir string) string {
@@ -142,6 +148,14 @@ func Extract(resourcesPath string) (*Catalog, error) {
 	}
 	c := &Catalog{Schema: schemaVersion, Names: map[string]map[string]string{}, Aliases: map[string]string{}}
 	c.IDs, c.Items = scanIDs(balance)
+	if b, err := readBalance(balance); err == nil {
+		c.Items, c.Defs, c.Storages = b.items, b.defs, b.storages
+		for id := range b.defs {
+			c.IDs = append(c.IDs, id)
+		}
+		slices.Sort(c.IDs)
+		c.IDs = slices.Compact(c.IDs)
+	}
 	for _, l := range Languages {
 		raw, ok := found["lng_"+l]
 		if !ok {
@@ -338,6 +352,37 @@ func (c *Catalog) index() {
 	}
 }
 
+func (c *Catalog) Def(id string) (ItemDef, bool) {
+	if d, ok := c.Defs[id]; ok {
+		return d, true
+	}
+	base, _, found := strings.Cut(id, ":")
+	if !found {
+		return ItemDef{}, false
+	}
+	d, ok := c.Defs[base]
+	return d, ok
+}
+
+func (c *Catalog) Icon(id string) string {
+	d, _ := c.Def(id)
+	return d.Icon
+}
+
+func (c *Catalog) StorageCapacity(wgoID string) (int, bool) {
+	n, ok := c.Storages[wgoID]
+	return n, ok
+}
+
+func (c *Catalog) EnsureIcons(ctx context.Context, gameDir, cacheDir string) error {
+	dir := IconsDir(cacheDir, c.Source)
+	if _, err := ExtractIcons(ctx, gameDir, dir); err != nil {
+		return err
+	}
+	c.IconDir = dir
+	return nil
+}
+
 func (c *Catalog) Known(id string) bool {
 	return c.known[id]
 }
@@ -419,7 +464,7 @@ func (c *Catalog) Search(query, lang string, itemsOnly bool, limit int) []Entry 
 		if q != "" && !strings.Contains(id, q) && !strings.Contains(strings.ToLower(name), q) {
 			continue
 		}
-		out = append(out, Entry{ID: id, Name: name, IsItem: c.IsItem(id)})
+		out = append(out, Entry{ID: id, Name: name, IsItem: c.IsItem(id), Icon: c.Icon(id)})
 		if limit > 0 && len(out) >= limit {
 			break
 		}

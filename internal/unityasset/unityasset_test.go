@@ -46,6 +46,30 @@ func TestParseAndFind(t *testing.T) {
 	assert.Equal(t, "items", string(found["GameBalance"][off:]))
 }
 
+func TestParseSkipsTypeTrees(t *testing.T) {
+	b := sample()
+	b.TypeTree = 1
+	af, err := parse(t, b.Build())
+	require.NoError(t, err)
+	require.Len(t, af.Objects, 3)
+	assert.Equal(t, int32(49), af.Objects[1].ClassID)
+	raw, err := af.Read(af.Objects[1])
+	require.NoError(t, err)
+	assert.Equal(t, "text asset", string(raw))
+}
+
+func TestClassIDs(t *testing.T) {
+	for _, tree := range []byte{0, 1} {
+		b := sample()
+		b.TypeTree = tree
+		ids, err := ClassIDs(b.Build())
+		require.NoError(t, err)
+		assert.Equal(t, []int32{ClassMonoBehavour, 49}, ids)
+	}
+	_, err := ClassIDs([]byte("short"))
+	require.ErrorIs(t, err, ErrCorrupt)
+}
+
 func TestParseRejects(t *testing.T) {
 	good := sample().Build()
 	tests := []struct {
@@ -54,7 +78,6 @@ func TestParseRejects(t *testing.T) {
 		want error
 	}{
 		{"old version", func() []byte { b := sample(); b.Version = 17; return b.Build() }(), ErrUnsupported},
-		{"type tree", func() []byte { b := sample(); b.TypeTree = 1; return b.Build() }(), ErrUnsupported},
 		{"size mismatch", append(append([]byte{}, good...), 0), ErrCorrupt},
 		{"truncated", good[:40], ErrCorrupt},
 		{"object offset overflow", func() []byte {

@@ -41,6 +41,11 @@ func (bl Builder) Build() []byte {
 	put(&meta, int32(19))
 	meta.WriteByte(bl.TypeTree)
 	classes := []int32{114, 49}
+	for _, o := range bl.Objects {
+		if !slices.Contains(classes, o.Class) {
+			classes = append(classes, o.Class)
+		}
+	}
 	put(&meta, int32(len(classes)))
 	for _, c := range classes {
 		put(&meta, c)
@@ -50,6 +55,13 @@ func (bl Builder) Build() []byte {
 			meta.Write(make([]byte, 16))
 		}
 		meta.Write(make([]byte, 16))
+		if bl.TypeTree != 0 {
+			put(&meta, int32(1))
+			put(&meta, int32(4))
+			meta.Write(make([]byte, 32))
+			meta.WriteString("int\x00")
+			put(&meta, int32(0))
+		}
 	}
 	put(&meta, int32(len(bl.Objects)))
 	var data bytes.Buffer
@@ -60,10 +72,7 @@ func (bl Builder) Build() []byte {
 		put(&meta, o.PathID)
 		put(&meta, int64(data.Len()))
 		put(&meta, uint32(len(o.Data)))
-		idx := int32(0)
-		if o.Class != 114 {
-			idx = 1
-		}
+		idx := int32(slices.Index(classes, o.Class))
 		if bl.BadType {
 			idx = 7
 		}

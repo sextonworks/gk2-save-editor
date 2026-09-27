@@ -11,18 +11,29 @@ type Change struct {
 	Kind    string `json:"kind"`
 	Subject string `json:"subject"`
 	Value   string `json:"value"`
+	Where   string `json:"where"`
 }
 
-func (s *Session) itemNames() map[string]string {
-	names := map[string]string{}
+func (s *Session) itemNames(lang string) (items, places map[string]string) {
+	items, places = map[string]string{}, map[string]string{}
 	collect := func(sv *save.Save) {
 		for _, c := range []save.Container{save.Bag, save.Belt} {
-			items, err := sv.Items(c)
+			list, err := sv.Items(c)
 			if err != nil {
 				continue
 			}
-			for _, it := range items {
-				names[it.UniqueID] = it.ID
+			for _, it := range list {
+				items[it.UniqueID] = it.ID
+			}
+		}
+		storages, err := sv.Storages()
+		if err != nil {
+			return
+		}
+		for _, st := range storages {
+			places[string(save.WorldContainer(st.UniqueID))] = s.storageName(st.ID, lang)
+			for _, it := range st.Items {
+				items[it.UniqueID] = it.ID
 			}
 		}
 	}
@@ -30,7 +41,7 @@ func (s *Session) itemNames() map[string]string {
 		collect(orig)
 	}
 	collect(s.editor.Save())
-	return names
+	return items, places
 }
 
 func number(v float64) string {
@@ -42,12 +53,18 @@ func (s *Session) changes() []Change {
 	if lang == "" {
 		lang = "en"
 	}
-	names := s.itemNames()
+	names, places := s.itemNames(lang)
 	item := func(uid string) string {
 		if id, ok := names[uid]; ok {
 			return s.name(id, lang)
 		}
 		return ""
+	}
+	where := func(c save.Container) string {
+		if p, ok := places[string(c)]; ok {
+			return p
+		}
+		return string(c)
 	}
 	ops := s.editor.Ops()
 	out := make([]Change, 0, len(ops))
@@ -60,13 +77,13 @@ func (s *Session) changes() []Change {
 				c.Kind = "money"
 			}
 		case save.SetItemCount:
-			c = Change{Kind: "count", Subject: item(o.UniqueID), Value: strconv.FormatInt(o.Count, 10)}
+			c = Change{Kind: "count", Subject: item(o.UniqueID), Value: strconv.FormatInt(o.Count, 10), Where: where(o.Container)}
 		case save.AddItem:
-			c = Change{Kind: "add", Subject: s.name(o.ItemID, lang), Value: strconv.FormatInt(o.Count, 10)}
+			c = Change{Kind: "add", Subject: s.name(o.ItemID, lang), Value: strconv.FormatInt(o.Count, 10), Where: where(o.Container)}
 		case save.RemoveItem:
-			c = Change{Kind: "remove", Subject: item(o.UniqueID)}
+			c = Change{Kind: "remove", Subject: item(o.UniqueID), Where: where(o.Container)}
 		case save.SetItemID:
-			c = Change{Kind: "replace", Subject: s.name(o.ItemID, lang)}
+			c = Change{Kind: "replace", Subject: s.name(o.ItemID, lang), Where: where(o.Container)}
 		case save.SetTalentPoints:
 			c = Change{Kind: "talent", Subject: o.Talent, Value: strconv.FormatInt(o.Points, 10)}
 		case save.MaxZombie:

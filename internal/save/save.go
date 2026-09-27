@@ -159,11 +159,13 @@ func stackOf(item *odin.Node) Stack {
 }
 
 func (s *Save) containerArray(c Container) (holder, arr *odin.Node, err error) {
-	field, ok := containerField[c]
-	if !ok {
+	if uid, ok := c.world(); ok {
+		holder, err = s.worldInventory(uid)
+	} else if field, ok := containerField[c]; ok {
+		holder, err = child(s.game, "playerData", field, "inventoryItem")
+	} else {
 		return nil, nil, fmt.Errorf("%q: %w", c, ErrContainer)
 	}
-	holder, err = child(s.game, "playerData", field, "inventoryItem")
 	if err != nil {
 		return nil, nil, err
 	}

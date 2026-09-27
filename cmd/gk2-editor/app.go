@@ -61,6 +61,10 @@ func (a *App) Inspirations(lang string) ([]session.InspirationView, error) {
 	return a.s.Inspirations(lang)
 }
 func (a *App) Techs(lang string) ([]session.TechView, error) { return a.s.Techs(lang) }
+func (a *App) Storages(lang string) ([]session.StorageView, error) {
+	return a.s.Storages(lang)
+}
+
 func (a *App) SearchItems(query, lang string, all bool) ([]gamedata.Entry, error) {
 	return a.s.SearchItems(query, lang, all, 300)
 }

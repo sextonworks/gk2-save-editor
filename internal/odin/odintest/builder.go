@@ -133,11 +133,20 @@ func (w *Writer) Container(field string, items []Stack, size int32) *Writer {
 	return w.End().End()
 }
 
+type Chest struct {
+	ID       string
+	UniqueID string
+	Zone     string
+	Size     int32
+	Items    []Stack
+}
+
 type SaveSpec struct {
 	Bag     []Stack
 	Belt    []Stack
 	Money   float32
 	BagSize int32
+	Chests  []Chest
 }
 
 func DefaultSpec() SaveSpec {
@@ -146,13 +155,26 @@ func DefaultSpec() SaveSpec {
 		Belt:    []Stack{{"hand_tool", 1}, {"axe_1", 1}, {"sword_0", 1}},
 		Money:   861,
 		BagSize: 25,
+		Chests: []Chest{
+			{ID: "chest_rough", UniqueID: "chest-yard", Zone: "yard", Size: 20, Items: []Stack{{"wood", 12}, {"stone", 5}}},
+			{ID: "chest_kitchen", UniqueID: "chest-home", Zone: "home", Size: 2},
+		},
 	}
 }
 
 func BuildSave(spec SaveSpec) []byte {
 	w := NewWriter()
 	w.Ref("", "GameSave, Assembly-CSharp").Str("gameSaveVersion", "1.006")
-	w.Ref("worldData", "WorldData, Assembly-CSharp").Ref("wgoDataList", "List").Array(1)
+	w.Ref("worldData", "WorldData, Assembly-CSharp").Ref("gameSceneDataList", "List").Array(1)
+	w.Ref("", "GameSceneData, Assembly-CSharp").Str("id", "MainScene")
+	w.Ref("wgoDataList", "List").Array(len(spec.Chests) + 1)
+	for _, c := range spec.Chests {
+		w.Ref("", "WgoData, Assembly-CSharp").Str("id", c.ID)
+		w.Ref("uniqueId", "SGuid, Assembly-CSharp").Str("id", c.UniqueID).End()
+		w.Str("worldZoneDataId", c.Zone)
+		w.Container("inventory", c.Items, c.Size)
+		w.End()
+	}
 	w.Ref("", "ZombieWgoData, Assembly-CSharp").Str("name", "zombie_name_1").Int("zombieType", 1)
 	w.Str("worldZoneDataId", "yard")
 	w.Ref("zombieItem", ItemType).Str("id", "body_zombie").Int("count", 1)
@@ -163,6 +185,7 @@ func BuildSave(spec SaveSpec) []byte {
 	w.EndArray().End().Int("inventorySize", 0).Int("inventoryFillSize", -1)
 	w.Ref("properties", PropsType).Array(0).EndArray().End().End()
 	w.Int("techRed", 10).Int("techBlue", 0).Int("techGreen", 5).End()
+	w.EndArray().End().End()
 	w.EndArray().End().End()
 	w.Ref("playerData", "PlayerData, Assembly-CSharp")
 	w.Container("inventory", spec.Bag, spec.BagSize)

@@ -3,6 +3,7 @@ import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { paraglideVitePlugin } from "@inlang/paraglide-js";
 
 export default defineConfig({
+  appType: "mpa",
   plugins: [
     svelte(),
     paraglideVitePlugin({

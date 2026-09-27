@@ -81,7 +81,7 @@ func TestViewsWithNames(t *testing.T) {
 	bag, err := h.s.Container("bag", "ru")
 	require.NoError(t, err)
 	assert.Equal(t, int64(25), bag.Capacity)
-	assert.Equal(t, ItemView{UniqueID: bag.Items[0].UniqueID, ID: "faith", Name: "Вера", Count: 99}, bag.Items[0])
+	assert.Equal(t, ItemView{UniqueID: bag.Items[0].UniqueID, ID: "faith", Name: "Вера", Count: 99, Icon: "i_faith", Stack: 999}, bag.Items[0])
 
 	p, err := h.s.Player("en")
 	require.NoError(t, err)
@@ -141,7 +141,7 @@ func TestEditUndoRedoAndWrite(t *testing.T) {
 		kinds = append(kinds, c.Kind)
 	}
 	assert.Equal(t, []string{"money", "add", "count", "remove", "replace", "talent", "zombie", "equip", "inspire", "inspire"}, kinds)
-	assert.Equal(t, Change{Kind: "add", Subject: "Simple Candle", Value: "3"}, st.Changes[1])
+	assert.Equal(t, Change{Kind: "add", Subject: "Simple Candle", Value: "3", Where: "bag"}, st.Changes[1])
 	assert.Equal(t, "Faith", st.Changes[2].Subject)
 	ru := h.s.SetLang("ru")
 	assert.Equal(t, "Вера", ru.Changes[2].Subject)
@@ -268,4 +268,67 @@ func TestUseFolders(t *testing.T) {
 	require.ErrorIs(t, err, locate.ErrNotFound)
 	_, err = h.s.UseFolders("", other)
 	require.ErrorIs(t, err, locate.ErrNotFound)
+}
+
+func TestStoragesAndIcons(t *testing.T) {
+	h := newHarness(t, true)
+	h.open(t)
+	list, err := h.s.Storages("en")
+	require.NoError(t, err)
+	require.Len(t, list, 2)
+	assert.Equal(t, "wgo:chest-home", list[0].UniqueID)
+	assert.Equal(t, "chest_rough", list[1].ID)
+	assert.Equal(t, int64(20), list[1].Capacity)
+	require.Len(t, list[1].Items, 2)
+
+	st, err := h.s.AddItem(list[0].UniqueID, "candle_basic", 2)
+	require.NoError(t, err)
+	assert.Equal(t, Change{Kind: "add", Subject: "Simple Candle", Value: "2", Where: "chest_kitchen"}, st.Changes[0])
+	list, err = h.s.Storages("en")
+	require.NoError(t, err)
+	require.Len(t, list[0].Items, 1)
+	assert.Equal(t, "i_candle_basic", list[0].Items[0].Icon)
+
+	require.Eventually(t, func() bool { return h.s.State().IconsReady }, 5*time.Second, 10*time.Millisecond)
+	path, err := h.s.IconPath("i_candle_basic")
+	require.NoError(t, err)
+	assert.FileExists(t, path)
+	_, err = h.s.IconPath("../etc")
+	require.Error(t, err)
+}
+
+func TestResourceGroups(t *testing.T) {
+	h := newHarness(t, true)
+	h.open(t)
+	p, err := h.s.Player("en")
+	require.NoError(t, err)
+	groups := map[string]string{}
+	for _, r := range p.Resources {
+		groups[r.Type] = r.Group
+	}
+	assert.Equal(t, map[string]string{"tech_red": GroupMain, "energy": GroupMain}, groups)
+	assert.Equal(t, "tech_red", p.Resources[0].Icon)
+	assert.True(t, p.Resources[0].Editable)
+
+	tests := []struct {
+		res      string
+		group    string
+		editable bool
+	}{
+		{"village_REP", GroupReputation, true},
+		{"wz_graveyard", GroupZones, false},
+		{"perk_mason", GroupPerks, false},
+		{"donkey_ready", GroupOther, true},
+	}
+	for _, tt := range tests {
+		v := h.s.resource(save.Resource{Type: tt.res}, "en")
+		assert.Equal(t, tt.group, v.Group, tt.res)
+		assert.Equal(t, tt.editable, v.Editable, tt.res)
+	}
+}
+
+func TestIconsNotReady(t *testing.T) {
+	h := newHarness(t, false)
+	_, err := h.s.IconPath("x")
+	require.ErrorIs(t, err, ErrNoIcons)
 }

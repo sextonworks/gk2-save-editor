@@ -67,6 +67,7 @@ type State struct {
 	Changes     []Change  `json:"changes"`
 	GameRunning bool      `json:"gameRunning"`
 	Conflict    bool      `json:"conflict"`
+	IconsReady  bool      `json:"iconsReady"`
 }
 
 type Session struct {
@@ -82,6 +83,9 @@ type Session struct {
 	running  bool
 	conflict bool
 	lang     string
+	iconsFor string
+	iconDir  string
+	ctx      context.Context
 	stop     context.CancelFunc
 	done     chan struct{}
 }
@@ -97,10 +101,11 @@ func New(cfg Config) *Session {
 }
 
 func (s *Session) Startup(ctx context.Context) {
+	wctx, cancel := context.WithCancel(ctx)
 	s.mu.Lock()
+	s.ctx = wctx
 	s.discover()
 	s.mu.Unlock()
-	wctx, cancel := context.WithCancel(ctx)
 	s.stop, s.done = cancel, make(chan struct{})
 	go s.watch(wctx)
 }
@@ -123,6 +128,9 @@ func (s *Session) discover() {
 		s.gameDir, s.env.GameDir = dir, dir
 		if cat, err := gamedata.Load(dir, s.cfg.CacheDir, false); err == nil {
 			s.catalog = cat
+			if s.ctx != nil {
+				s.prepareIcons(s.ctx)
+			}
 		} else {
 			s.env.CatalogError = err.Error()
 		}
@@ -206,7 +214,7 @@ func (s *Session) UseFolders(saveDir, gameDir string) (Environment, error) {
 }
 
 func (s *Session) stateLocked() State {
-	st := State{GameRunning: s.running, Conflict: s.conflict, Changes: []Change{}}
+	st := State{GameRunning: s.running, Conflict: s.conflict, Changes: []Change{}, IconsReady: s.iconDir != ""}
 	if s.editor == nil {
 		return st
 	}

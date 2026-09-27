@@ -81,11 +81,22 @@ func TestItemOpErrors(t *testing.T) {
 	assert.Empty(t, e.Changes())
 }
 
-func TestAddItemNeedsTemplate(t *testing.T) {
+func TestAddItemBorrowsEarlierTemplate(t *testing.T) {
 	spec := odintest.DefaultSpec()
 	spec.Bag = nil
 	e := editor(t, spec)
-	require.ErrorIs(t, e.Apply(NewAddItem(Bag, "x", 1)), ErrTemplate)
+	require.NoError(t, e.Apply(NewAddItem(Bag, "candle_basic", 2)))
+	bag := stacks(t, e.Save(), Bag)
+	require.Len(t, bag, 1)
+	assert.Equal(t, "candle_basic", bag[0].ID)
+	assert.Equal(t, int64(2), bag[0].Count)
+}
+
+func TestAddItemNeedsTemplate(t *testing.T) {
+	spec := odintest.DefaultSpec()
+	spec.Chests = []odintest.Chest{{ID: "chest", UniqueID: "first", Size: 5}}
+	e := editor(t, spec)
+	require.ErrorIs(t, e.Apply(NewAddItem(WorldContainer("first"), "x", 1)), ErrTemplate)
 }
 
 func TestTalentAndZombieOps(t *testing.T) {

@@ -7,6 +7,7 @@ export type Page =
   | "saves"
   | "character"
   | "inventory"
+  | "storage"
   | "zombies"
   | "inspirations"
   | "technologies"

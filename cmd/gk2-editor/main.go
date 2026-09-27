@@ -61,7 +61,7 @@ func run() error {
 		Height:           780,
 		MinWidth:         900,
 		MinHeight:        600,
-		AssetServer:      &assetserver.Options{Assets: assets},
+		AssetServer:      &assetserver.Options{Assets: assets, Handler: iconHandler(app.s.IconPath)},
 		BackgroundColour: &options.RGBA{R: 22, G: 27, B: 32, A: 1},
 		OnStartup:        app.startup,
 		OnShutdown:       app.shutdown,

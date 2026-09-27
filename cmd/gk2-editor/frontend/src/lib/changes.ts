@@ -29,3 +29,9 @@ export function describe(c: session.Change): string {
       return m.ch_other(p);
   }
 }
+
+export function place(where: string): string {
+  if (where === "bag") return m.backpack();
+  if (where === "belt") return m.belt();
+  return where;
+}

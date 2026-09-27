@@ -14,6 +14,18 @@ type ItemView struct {
 	ID       string `json:"id"`
 	Name     string `json:"name"`
 	Count    int64  `json:"count"`
+	Icon     string `json:"icon"`
+	Stack    int    `json:"stack"`
+}
+
+type StorageView struct {
+	UniqueID string     `json:"uniqueId"`
+	ID       string     `json:"id"`
+	Name     string     `json:"name"`
+	Zone     string     `json:"zone"`
+	ZoneName string     `json:"zoneName"`
+	Capacity int64      `json:"capacity"`
+	Items    []ItemView `json:"items"`
 }
 
 type ContainerView struct {
@@ -22,9 +34,12 @@ type ContainerView struct {
 }
 
 type ResourceView struct {
-	Type  string  `json:"type"`
-	Name  string  `json:"name"`
-	Value float64 `json:"value"`
+	Type     string  `json:"type"`
+	Name     string  `json:"name"`
+	Value    float64 `json:"value"`
+	Group    string  `json:"group"`
+	Icon     string  `json:"icon"`
+	Editable bool    `json:"editable"`
 }
 
 type TalentView struct {
@@ -78,6 +93,16 @@ func (s *Session) baseName(id, lang string) string {
 	return s.catalog.BaseName(id, lang)
 }
 
+func (s *Session) item(st save.Stack, lang string) ItemView {
+	v := ItemView{UniqueID: st.UniqueID, ID: st.ID, Name: s.name(st.ID, lang), Count: st.Count}
+	if s.catalog != nil {
+		if d, ok := s.catalog.Def(st.ID); ok {
+			v.Icon, v.Stack = d.Icon, d.Stack
+		}
+	}
+	return v
+}
+
 func (s *Session) read(fn func(sv *save.Save) error) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -95,7 +120,7 @@ func (s *Session) Container(container, lang string) (ContainerView, error) {
 			return err
 		}
 		for _, it := range items {
-			view.Items = append(view.Items, ItemView{UniqueID: it.UniqueID, ID: it.ID, Name: s.name(it.ID, lang), Count: it.Count})
+			view.Items = append(view.Items, s.item(it, lang))
 		}
 		view.Capacity, err = sv.Capacity(save.Container(container))
 		return err
@@ -113,8 +138,9 @@ func (s *Session) Player(lang string) (Player, error) {
 		for _, r := range res {
 			if r.Type == "money" {
 				p.Money = r.Value
+				continue
 			}
-			p.Resources = append(p.Resources, ResourceView{Type: r.Type, Name: s.name(r.Type, lang), Value: r.Value})
+			p.Resources = append(p.Resources, s.resource(r, lang))
 		}
 		talents, err := sv.Talents()
 		if err != nil {
@@ -142,7 +168,7 @@ func (s *Session) Zombies(lang string) ([]ZombieView, error) {
 				Parts: []ItemView{}, PerkNames: []string{},
 			}
 			for _, p := range z.BodyParts {
-				v.Parts = append(v.Parts, ItemView{UniqueID: p.UniqueID, ID: p.ID, Name: s.name(p.ID, lang), Count: p.Count})
+				v.Parts = append(v.Parts, s.item(p, lang))
 			}
 			for _, perk := range z.Perks {
 				v.PerkNames = append(v.PerkNames, s.name(perk, lang))

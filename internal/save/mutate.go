@@ -86,19 +86,43 @@ func (s *Save) setString(n *odin.Node, v string) error {
 	return s.reload(data)
 }
 
-func (s *Save) template(arr *odin.Node) (*odin.Node, error) {
-	for _, it := range arr.Children {
-		inner, err := array(it, "inventory")
-		if err != nil || len(inner.Children) > 0 {
-			continue
-		}
-		props, err := array(it, "properties")
-		if err != nil || len(props.Children) > 0 {
-			continue
-		}
-		return it, nil
+func plainItem(it *odin.Node) bool {
+	inner, err := array(it, "inventory")
+	if err != nil || len(inner.Children) > 0 {
+		return false
 	}
-	return nil, ErrTemplate
+	props, err := array(it, "properties")
+	return err == nil && len(props.Children) == 0
+}
+
+func (s *Save) template(arr *odin.Node, before int) (*odin.Node, error) {
+	for _, it := range arr.Children {
+		if plainItem(it) {
+			return it, nil
+		}
+	}
+	var found *odin.Node
+	odin.Walk(s.root, func(n *odin.Node) bool {
+		if found != nil || n.Off >= before {
+			return false
+		}
+		if n.Name != "inventory" {
+			return true
+		}
+		if items, ok := n.Array(); ok {
+			for _, it := range items.Children {
+				if it.End <= before && plainItem(it) {
+					found = it
+					return false
+				}
+			}
+		}
+		return true
+	})
+	if found == nil {
+		return nil, ErrTemplate
+	}
+	return found, nil
 }
 
 func (s *Save) insertItem(c Container, itemID string, count int64, uniqueID string) error {
@@ -109,7 +133,8 @@ func (s *Save) insertItem(c Container, itemID string, count int64, uniqueID stri
 	if size := integer(holder, "inventorySize"); int64(len(arr.Children)) >= size {
 		return fmt.Errorf("%s %d/%d: %w", c, len(arr.Children), size, ErrFull)
 	}
-	tpl, err := s.template(arr)
+	at := arr.End - 1
+	tpl, err := s.template(arr, at)
 	if err != nil {
 		return fmt.Errorf("%s: %w", c, err)
 	}
@@ -159,7 +184,6 @@ func (s *Save) insertItem(c Container, itemID string, count int64, uniqueID stri
 			return fmt.Errorf("fill size: %w", err)
 		}
 	}
-	at := arr.Children[len(arr.Children)-1].End
 	return s.reload(odin.Splice(data, at, at, blob))
 }
 

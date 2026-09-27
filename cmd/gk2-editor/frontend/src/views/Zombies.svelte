@@ -1,6 +1,7 @@
 <script lang="ts">
   import { m } from "../lib/paraglide/messages.js";
   import { app, api, edit, lang, run } from "../lib/app.svelte";
+  import Icon from "../components/Icon.svelte";
   import type { session } from "../lib/wailsjs/go/models";
 
   let zombies = $state<session.ZombieView[]>([]);
@@ -42,7 +43,7 @@
           <h3>{m.body_parts()}</h3>
           <ul>
             {#each z.parts as p (p.uniqueId)}
-              <li>{p.name}{#if p.count > 1}<span class="muted">{" \u00d7" + p.count}</span>{/if}</li>
+              <li><Icon name={p.icon} size={32} /> {p.name}{#if p.count > 1}<span class="muted">{" \u00d7" + p.count}</span>{/if}</li>
             {/each}
           </ul>
         </div>

@@ -15,6 +15,7 @@ const (
 	headerSize        = 48
 	maxMetadata       = 64 << 20
 	maxCount          = 1 << 20
+	typeTreeNodeSize  = 32
 )
 
 var (
@@ -154,6 +155,45 @@ func Parse(r io.ReaderAt, size int64) (*File, error) {
 	return af, nil
 }
 
+func ClassIDs(head []byte) ([]int32, error) {
+	if len(head) < headerSize {
+		return nil, fmt.Errorf("%w: header", ErrCorrupt)
+	}
+	if v := binary.BigEndian.Uint32(head[8:]); v != SupportedVersion {
+		return nil, fmt.Errorf("%w: format version %d", ErrUnsupported, v)
+	}
+	var order binary.ByteOrder = binary.LittleEndian
+	if head[16] != 0 {
+		order = binary.BigEndian
+	}
+	c := &cursor{b: head[headerSize:], order: order, base: headerSize}
+	af := &File{}
+	if _, err := c.cstring(); err != nil {
+		return nil, err
+	}
+	if err := c.skip(4); err != nil {
+		return nil, err
+	}
+	typeTree, err := c.u8()
+	if err != nil {
+		return nil, err
+	}
+	n, err := c.i32()
+	if err != nil {
+		return nil, err
+	}
+	if n < 0 || n > maxCount {
+		return nil, fmt.Errorf("%w: type count %d", ErrCorrupt, n)
+	}
+	out := make([]int32, n)
+	for i := range out {
+		if out[i], err = af.readType(c, typeTree != 0); err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
+}
+
 func (af *File) readMetadata(c *cursor, dataOffset int64) error {
 	var err error
 	if af.UnityVersion, err = c.cstring(); err != nil {
@@ -166,9 +206,6 @@ func (af *File) readMetadata(c *cursor, dataOffset int64) error {
 	if err != nil {
 		return err
 	}
-	if typeTree != 0 {
-		return fmt.Errorf("%w: files with type trees are not supported", ErrUnsupported)
-	}
 	typeCount, err := c.i32()
 	if err != nil {
 		return err
@@ -178,7 +215,7 @@ func (af *File) readMetadata(c *cursor, dataOffset int64) error {
 	}
 	classes := make([]int32, typeCount)
 	for i := range classes {
-		if classes[i], err = af.readType(c); err != nil {
+		if classes[i], err = af.readType(c, typeTree != 0); err != nil {
 			return err
 		}
 	}
@@ -200,7 +237,7 @@ func (af *File) readMetadata(c *cursor, dataOffset int64) error {
 	return nil
 }
 
-func (af *File) readType(c *cursor) (int32, error) {
+func (af *File) readType(c *cursor, typeTree bool) (int32, error) {
 	class, err := c.i32()
 	if err != nil {
 		return 0, err
@@ -216,7 +253,38 @@ func (af *File) readType(c *cursor) (int32, error) {
 			return 0, err
 		}
 	}
-	return class, c.skip(16)
+	if err := c.skip(16); err != nil {
+		return 0, err
+	}
+	if !typeTree {
+		return class, nil
+	}
+	return class, skipTypeTree(c)
+}
+
+func skipTypeTree(c *cursor) error {
+	nodes, err := c.i32()
+	if err != nil {
+		return err
+	}
+	strs, err := c.i32()
+	if err != nil {
+		return err
+	}
+	if nodes < 0 || nodes > maxCount || strs < 0 || strs > maxMetadata {
+		return fmt.Errorf("%w: type tree size", ErrCorrupt)
+	}
+	if err := c.skip(int(nodes)*typeTreeNodeSize + int(strs)); err != nil {
+		return err
+	}
+	deps, err := c.i32()
+	if err != nil {
+		return err
+	}
+	if deps < 0 || deps > maxCount {
+		return fmt.Errorf("%w: type dependencies %d", ErrCorrupt, deps)
+	}
+	return c.skip(int(deps) * 4)
 }
 
 func (af *File) readObject(c *cursor, dataOffset int64, classes []int32) (Object, error) {

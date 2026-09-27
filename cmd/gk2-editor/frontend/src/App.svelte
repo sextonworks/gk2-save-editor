@@ -1,11 +1,12 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { m } from "./lib/paraglide/messages.js";
-  import { describe } from "./lib/changes";
+  import { describe, place } from "./lib/changes";
   import { app, api, changeLocale, edit, listen, refresh, run, type Locale, type Page } from "./lib/app.svelte";
   import Saves from "./views/Saves.svelte";
   import Character from "./views/Character.svelte";
   import Inventory from "./views/Inventory.svelte";
+  import Storage from "./views/Storage.svelte";
   import Zombies from "./views/Zombies.svelte";
   import Inspirations from "./views/Inspirations.svelte";
   import Technologies from "./views/Technologies.svelte";
@@ -16,6 +17,7 @@
     { id: "saves", label: () => m.nav_saves(), needsSave: false },
     { id: "character", label: () => m.nav_character(), needsSave: true },
     { id: "inventory", label: () => m.nav_inventory(), needsSave: true },
+    { id: "storage", label: () => m.nav_storage(), needsSave: true },
     { id: "zombies", label: () => m.nav_zombies(), needsSave: true },
     { id: "inspirations", label: () => m.nav_inspirations(), needsSave: true },
     { id: "technologies", label: () => m.nav_technologies(), needsSave: true },
@@ -119,6 +121,8 @@
           <Character />
         {:else if app.page === "inventory"}
           <Inventory />
+        {:else if app.page === "storage"}
+          <Storage />
         {:else if app.page === "zombies"}
           <Zombies />
         {:else if app.page === "inspirations"}
@@ -136,7 +140,10 @@
     {#if open && app.state && app.state.changes.length > 0}
       <ol>
         {#each app.state.changes as change, i (i)}
-          <li>{describe(change)}</li>
+          <li>
+            {describe(change)}
+            {#if change.where}<span class="where">{place(change.where)}</span>{/if}
+          </li>
         {/each}
       </ol>
       <p class="muted small">{m.journal_hint()}</p>
@@ -162,7 +169,9 @@
   .shell {
     display: grid;
     grid-template-columns: 208px minmax(0, 1fr) 272px;
+    grid-template-rows: minmax(0, 1fr);
     height: 100%;
+    overflow: hidden;
   }
 
   nav {
@@ -204,7 +213,7 @@
 
   .lang { display: grid; gap: 0.25rem; }
 
-  main { display: flex; flex-direction: column; min-width: 0; }
+  main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 
   header { padding: 1rem 1.5rem 0.5rem; display: grid; gap: 0.5rem; }
   .title { display: flex; align-items: baseline; gap: 1rem; }
@@ -247,6 +256,7 @@
     align-content: start;
   }
   .journal li { font-size: var(--step--1); overflow-wrap: anywhere; }
+  .journal .where { display: block; color: var(--stone); font-size: 0.85em; }
   .journal li::marker { color: var(--candle); font-family: var(--serif); }
   .journal > p { flex: 1; }
   .actions { display: grid; gap: 0.5rem; }
