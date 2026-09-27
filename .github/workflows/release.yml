@@ -27,7 +27,7 @@ jobs:
       - name: Build CLI binaries
         run: |
           mkdir -p dist
-          for t in windows/amd64 darwin/arm64 darwin/amd64 linux/amd64 linux/arm64; do
+          for t in windows/amd64 darwin/arm64 linux/amd64 linux/arm64; do
             os=${t%/*}; arch=${t#*/}; ext=""
             [ "$os" = windows ] && ext=.exe
             CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -trimpath \
@@ -46,7 +46,6 @@ jobs:
         include:
           - {runner: windows-2025, os: windows, arch: amd64}
           - {runner: macos-15, os: macos, arch: arm64}
-          - {runner: macos-15-intel, os: macos, arch: amd64}
           - {runner: ubuntu-22.04, os: linux, arch: amd64}
           - {runner: ubuntu-22.04-arm, os: linux, arch: arm64}
     runs-on: ${{ matrix.runner }}

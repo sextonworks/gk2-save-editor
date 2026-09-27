@@ -19,7 +19,7 @@ zone), zombies, inspirations, technologies, a read-only inspector of every save 
 Changes pile up in a journal on the right: undo and redo them, then press Save to write the file and a backup.
 
 Download `gk2-editor` for your platform from [Releases](https://github.com/sextonworks/gk2-save-editor/releases):
-Windows x64, macOS (Apple Silicon and Intel) and Linux (x64 and arm64). To build it from source you need Go 1.27,
+Windows x64, macOS on Apple Silicon and Linux (x64 and arm64). To build it from source you need Go 1.27,
 Node 24 with pnpm, and the Wails CLI:
 
 ```bash

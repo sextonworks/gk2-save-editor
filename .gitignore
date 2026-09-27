@@ -2,6 +2,7 @@
 /build/
 cmd/gk2-editor/build/*
 !cmd/gk2-editor/build/appicon.png
+!cmd/gk2-editor/build/darwin/
 cmd/gk2-editor/frontend/package.json.md5
 *.dat
 *.info
