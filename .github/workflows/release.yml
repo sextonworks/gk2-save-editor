@@ -3,12 +3,18 @@ name: Release
 on:
   push:
     tags: ["v*"]
+    branches: ["**"]
+    paths: [".github/workflows/release.yml"]
+  workflow_dispatch:
 
 permissions:
   contents: write
 
+env:
+  VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}
+
 jobs:
-  release:
+  cli:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -23,11 +29,84 @@ jobs:
             os=${t%/*}; arch=${t#*/}; ext=""
             [ "$os" = windows ] && ext=.exe
             CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -trimpath \
-              -ldflags "-s -w -X main.revision=${GITHUB_REF_NAME}" \
-              -o "dist/gk2-${GITHUB_REF_NAME}-${os}-${arch}${ext}" ./cmd/gk2
+              -ldflags "-s -w -X main.revision=$VERSION" \
+              -o "dist/gk2-$VERSION-$os-$arch$ext" ./cmd/gk2
           done
-          (cd dist && sha256sum * > SHA256SUMS)
+      - uses: actions/upload-artifact@v7
+        with:
+          name: cli
+          path: dist/*
+
+  editor:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {runner: windows-2025, os: windows, arch: amd64}
+          - {runner: macos-15, os: macos, arch: arm64}
+          - {runner: macos-15-intel, os: macos, arch: amd64}
+          - {runner: ubuntu-22.04, os: linux, arch: amd64}
+          - {runner: ubuntu-22.04-arm, os: linux, arch: arm64}
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: cmd/gk2-editor
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "13.0"
+      ASSET: gk2-editor-${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}-${{ matrix.os }}-${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: pnpm/action-setup@v6.1.0
+        with:
+          package_json_file: cmd/gk2-editor/frontend/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: cmd/gk2-editor/frontend/pnpm-lock.yaml
+      - name: Install WebKitGTK
+        if: matrix.os == 'linux'
+        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+      - run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.14.0
+      - name: Build
+        run: |
+          tags=""
+          [ "${{ matrix.os }}" = linux ] && tags="-tags webkit2_41"
+          wails build -clean -trimpath $tags -ldflags "-X main.revision=$VERSION"
+      - name: Package
+        run: |
+          mkdir -p ../../dist
+          cd build/bin
+          case "${{ matrix.os }}" in
+            macos)
+              codesign --force --deep --sign - gk2-editor.app
+              ditto -c -k --keepParent gk2-editor.app "../../../../dist/$ASSET.zip" ;;
+            windows)
+              7z a "../../../../dist/$ASSET.zip" gk2-editor.exe ;;
+            linux)
+              tar -czf "../../../../dist/$ASSET.tar.gz" gk2-editor ;;
+          esac
+      - uses: actions/upload-artifact@v7
+        with:
+          name: editor-${{ matrix.os }}-${{ matrix.arch }}
+          path: dist/*
+
+  release:
+    needs: [cli, editor]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+      - run: cd dist && sha256sum * > SHA256SUMS && ls -l
       - name: Create GitHub release
+        if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "$GITHUB_REF_NAME" dist/* --title "$GITHUB_REF_NAME" --generate-notes --verify-tag
