@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-256 -256 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="sky" cx="0" cy="-80" r="380" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2b3540"/>
+      <stop offset="1" stop-color="#161b20"/>
+    </radialGradient>
+    <linearGradient id="stone" x1="0" y1="-200" x2="0" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8a959c"/>
+      <stop offset="1" stop-color="#5d6870"/>
+    </linearGradient>
+  </defs>
+  <rect x="-256" y="-256" width="512" height="512" rx="96" fill="url(#sky)"/>
+  <path d="M 150 -196 a 40 40 0 1 0 32 62 a 33 33 0 1 1 -32 -62 Z" fill="#f0b44c"/>
+  <path d="M -150 200 V -40 A 150 150 0 0 1 150 -40 V 200 Z" fill="url(#stone)"/>
+  <path d="M -126 200 V -34 A 126 126 0 0 1 126 -34 V 200 Z" fill="none" stroke="#3f4a52" stroke-width="6" opacity="0.6"/>
+  <text x="-78" y="52" font-family="Menlo, 'SF Mono', monospace" font-size="120" font-weight="700" fill="#1d2429">&gt;</text>
+  <rect x="6" y="-30" width="62" height="92" rx="6" fill="#9bc36b"/>
+  <text x="0" y="140" text-anchor="middle" font-family="Menlo, 'SF Mono', monospace" font-size="44" font-weight="700" fill="#2d363d" letter-spacing="6">GK2</text>
+  <ellipse cx="0" cy="226" rx="250" ry="56" fill="#1f2a1c"/>
+  <path d="M -250 216 Q -120 186 0 196 Q 120 186 250 216 V 256 H -250 Z" fill="#2c3a26"/>
+</svg>

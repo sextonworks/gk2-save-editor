@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/icon.png" width="160" alt="gk2 icon: a gravestone with a terminal prompt">
+</p>
+
 # gk2: save editor for Graveyard Keeper 2
 
 A small command-line tool that reads and edits Graveyard Keeper 2 save files:
