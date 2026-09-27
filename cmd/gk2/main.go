@@ -50,6 +50,10 @@ type cli struct {
 	Paths   pathsCmd   `cmd:"" help:"Show the folders gk2 uses."`
 	Find    findCmd    `cmd:"" help:"Search items (or every id with --all) by id or name."`
 
+	Inspirations inspirationsCmd `cmd:"" help:"Show inspiration progress per talent branch."`
+	Techs        techsCmd        `cmd:"" help:"Show technologies: unlocked, available, hidden."`
+	Inspire      inspireCmd      `cmd:"" help:"Bring inspirations to their goal so they can be bought in the game."`
+
 	Add        addCmd        `cmd:"" help:"Add new stacks: gk2 add candle_basic=5 heal_potion"`
 	Count      countCmd      `cmd:"" help:"Set the count of an existing stack."`
 	Remove     removeCmd     `cmd:"" help:"Remove stacks."`

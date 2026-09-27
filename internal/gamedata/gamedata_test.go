@@ -76,7 +76,7 @@ func fullGame(t *testing.T) string {
 	return gameDir(t,
 		unitytest.Object{PathID: 1, Class: unityasset.ClassMonoBehavour, Data: unitytest.Mono("GameBalance", balance())},
 		unitytest.Object{PathID: 2, Class: unityasset.ClassMonoBehavour, Data: unitytest.Mono("lng_en",
-			language("en", []string{"faith", "candle", "heal_potion", "fertilizer:add_cells_2"}, []string{"Faith", "Candle", "Healing Potion", "Fertilizer"}))},
+			language("en", []string{"faith", "candle", "heal_potion", "fertilizer:add_cells_2", "lumberjack_1", "lumberjack_1_d"}, []string{"Faith", "Candle", "Healing Potion", "Fertilizer", "Lumberjack I", "Chop trees."}))},
 		unitytest.Object{PathID: 3, Class: unityasset.ClassMonoBehavour, Data: unitytest.Mono("lng_ru",
 			language("ru", []string{"faith", "candle"}, []string{"<nobr>Вера</nobr>", "Свеча\u200b"}))},
 	)
@@ -107,6 +107,18 @@ func TestExtractCatalog(t *testing.T) {
 			assert.Equal(t, tt.item, c.IsItem(tt.id))
 		})
 	}
+}
+
+func TestBaseNameAndDescription(t *testing.T) {
+	c, err := Load(fullGame(t), t.TempDir(), false)
+	require.NoError(t, err)
+	assert.Equal(t, "Lumberjack", c.BaseName("lumberjack", "en"))
+	c.Names["zh_cn"] = map[string]string{"lumberjack_1": "伐木工I"}
+	assert.Equal(t, "伐木工", c.BaseName("lumberjack", "zh_cn"))
+	assert.Equal(t, "Faith", c.BaseName("faith", "en"))
+	assert.Equal(t, "nothing", c.BaseName("nothing", "en"))
+	assert.Equal(t, "Chop trees.", c.Description("lumberjack", "en"))
+	assert.Empty(t, c.Description("faith", "en"))
 }
 
 func TestSearch(t *testing.T) {

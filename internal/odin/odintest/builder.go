@@ -180,9 +180,30 @@ func BuildSave(spec SaveSpec) []byte {
 	w.Ref("talentSystemData", "TalentSystemData, Assembly-CSharp").Ref("talentData", "List").Array(2)
 	for i, id := range []string{"talent_orange", "talent_red"} {
 		w.Ref("", "TalentData, Assembly-CSharp").Str("id", id).Int("curExp", 1).Int("curTalentLevel", 4)
-		w.Int("talentExpPoints", int32(2+i)).Int("curTalentValue", 1).End()
+		w.Int("talentExpPoints", int32(2+i)).Int("curTalentValue", 1)
+		insp := [][3]int32{{3, 6}, {13, 11}}
+		w.Ref("inspirationsProgression", "List").Array(len(insp))
+		for j, p := range insp {
+			w.Ref("", "InspirationProgressData, Assembly-CSharp").Str("id", fmt.Sprintf("insp_%s_%d", id[7:], j))
+			w.Int("currentValue", p[0]).Int("completionGoalValue", p[1]).End()
+		}
+		w.EndArray().End().End()
 	}
 	w.EndArray().End().End()
+	w.Ref("knowledgeSystem", "KnowledgeSystem, Assembly-CSharp")
+	techs := []struct {
+		field string
+		list  []string
+	}{{"unlockedTechs", []string{"garden_improve_1", "candles_1"}}, {"hiddenTechs", []string{"zombie_wood"}}, {"revealedTechs", []string{"garden_honey"}}}
+	for _, tl := range techs {
+		field, list := tl.field, tl.list
+		w.Ref(field, "System.Collections.Generic.List`1[[System.String, mscorlib]], mscorlib").Array(len(list))
+		for _, v := range list {
+			w.Str("", v)
+		}
+		w.EndArray().End()
+	}
+	w.End()
 	w.End()
 	return w.Bytes()
 }

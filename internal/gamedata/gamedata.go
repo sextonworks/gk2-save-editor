@@ -386,6 +386,27 @@ func (c *Catalog) Name(id, lang string) string {
 	return id
 }
 
+var firstLevelSuffix = regexp.MustCompile(`\s*I$`)
+
+func (c *Catalog) BaseName(id, lang string) string {
+	if n := c.Name(id, lang); n != id {
+		return n
+	}
+	if n := c.Name(id+"_1", lang); n != id+"_1" {
+		return firstLevelSuffix.ReplaceAllString(n, "")
+	}
+	return id
+}
+
+func (c *Catalog) Description(id, lang string) string {
+	for _, key := range []string{id + "_d", id + "_1_d"} {
+		if n := c.Name(key, lang); n != key {
+			return n
+		}
+	}
+	return ""
+}
+
 func (c *Catalog) Search(query, lang string, itemsOnly bool, limit int) []Entry {
 	q := strings.ToLower(strings.TrimSpace(query))
 	out := make([]Entry, 0, min(limit, 64))
