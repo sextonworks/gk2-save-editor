@@ -1,0 +1,36 @@
+version: "2"
+
+linters:
+  enable:
+    - gocyclo
+    - dupl
+    - nolintlint
+    - errorlint
+    - gocritic
+    - misspell
+    - unconvert
+    - usestdlibvars
+    - bodyclose
+    - copyloopvar
+  settings:
+    errcheck:
+      exclude-functions:
+        - fmt.Fprintf
+        - fmt.Fprintln
+        - fmt.Fprint
+    gocyclo:
+      min-complexity: 20
+    dupl:
+      threshold: 100
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/sextonworks/gk2-save-editor
