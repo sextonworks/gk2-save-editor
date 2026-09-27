@@ -284,3 +284,7 @@ func (s *Save) Zombies() ([]Zombie, error) {
 	}
 	return out, nil
 }
+
+func (s *Save) Root() *odin.Node {
+	return s.root
+}
