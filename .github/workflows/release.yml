@@ -12,12 +12,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.2.0
-      - name: Tag matches package version
-        run: test "${GITHUB_REF_NAME#v}" = "$(sed -n 's/^__version__ = "\(.*\)"/\1/p' gk2/__init__.py)"
-      - run: uv sync --frozen
-      - run: uv run pytest
-      - run: uv build
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - run: go test ./internal/... ./cmd/gk2
+      - name: Build CLI binaries
+        run: |
+          mkdir -p dist
+          for t in windows/amd64 darwin/arm64 darwin/amd64 linux/amd64 linux/arm64; do
+            os=${t%/*}; arch=${t#*/}; ext=""
+            [ "$os" = windows ] && ext=.exe
+            CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -trimpath \
+              -ldflags "-s -w -X main.revision=${GITHUB_REF_NAME}" \
+              -o "dist/gk2-${GITHUB_REF_NAME}-${os}-${arch}${ext}" ./cmd/gk2
+          done
+          (cd dist && sha256sum * > SHA256SUMS)
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}

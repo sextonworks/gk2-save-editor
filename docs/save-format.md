@@ -74,6 +74,20 @@ Backpack and belt holders also have `inventorySize` (slots) and `inventoryFillSi
 
 ## Game data
 
-Item, craft and building ids come from one large `MonoBehaviour` in
-`GraveyardKeeper2_Data/resources.assets`. `gk2` finds it by content, not by object id, and caches it
-in the user cache folder. `gk2 find --refresh` rebuilds the cache after a game update.
+Item, craft and building definitions come from the `GameBalance` `MonoBehaviour` in
+`GraveyardKeeper2_Data/resources.assets`, read with the field schema in `internal/typetree/schema`.
+It gives item icons and stack sizes, and which world objects are chests (`interactionType` 6) and how many slots
+they have. Names come from the `lng_en`, `lng_ru` and `lng_zh_cn` tables in the same file.
+The catalog is cached in the user cache folder, keyed by the hash of `resources.assets`;
+`gk2 find --refresh` rebuilds it by hand.
+
+Icons are sprites in two atlases, `Icons` (`sharedassets0.assets`) and `IconsCompressed`
+(an Addressables bundle under `StreamingAssets/aa`). Both use uncompressed RGBA32 textures with rectangle
+packing, so an icon is a plain crop of the atlas.
+
+## Chests
+
+World objects live in `worldData/gameSceneDataList[]/wgoDataList[]`, each with an `id`, a `uniqueId/id`
+and a `worldZoneDataId`. A chest keeps its items in `inventory/inventoryItem/inventory[]`, the same `Item`
+layout as the backpack, with `inventorySize` (slots) and `inventoryFillSize` next to it. Zone names are the
+localization keys `wz_<zone>`.

@@ -58,7 +58,7 @@ type cli struct {
 	Count      countCmd      `cmd:"" help:"Set the count of an existing stack."`
 	Remove     removeCmd     `cmd:"" help:"Remove stacks."`
 	Swap       swapCmd       `cmd:"" help:"Replace an item id with another one in place, keeping the count."`
-	Money      moneyCmd      `cmd:"" help:"Show or set money in copper (100 copper = 1 silver)."`
+	Money      moneyCmd      `cmd:"" help:"Show or set money in bronze (100 bronze = 1 silver, 100 silver = 1 gold)."`
 	SetRes     setResCmd     `cmd:"" name:"set-res" help:"Set a player resource: gk2 set-res tech_red 999"`
 	SetTalents setTalentsCmd `cmd:"" name:"set-talents" help:"Set free talent points in every branch (or one with --branch)."`
 	ZombiesMax zombiesMaxCmd `cmd:"" name:"zombies-max" help:"Best body parts, max skill slots and tech points for every zombie."`

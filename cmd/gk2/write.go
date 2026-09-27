@@ -256,7 +256,7 @@ func (a *swapCmd) Run(c *cli, g *globals) error {
 }
 
 type moneyCmd struct {
-	Value *float64 `arg:"" optional:"" help:"New amount in copper (100 copper = 1 silver). Stay below 16777216."`
+	Value *float64 `arg:"" optional:"" help:"New amount in bronze (100 bronze = 1 silver, 100 silver = 1 gold). Stay below 16777216."`
 }
 
 func (a *moneyCmd) Run(c *cli, g *globals) error {
