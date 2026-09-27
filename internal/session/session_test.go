@@ -136,6 +136,16 @@ func TestEditUndoRedoAndWrite(t *testing.T) {
 	st, err = h.s.Inspire("", "")
 	require.NoError(t, err)
 	assert.Len(t, st.Changes, 10)
+	kinds := make([]string, 0, len(st.Changes))
+	for _, c := range st.Changes {
+		kinds = append(kinds, c.Kind)
+	}
+	assert.Equal(t, []string{"money", "add", "count", "remove", "replace", "talent", "zombie", "equip", "inspire", "inspire"}, kinds)
+	assert.Equal(t, Change{Kind: "add", Subject: "Simple Candle", Value: "3"}, st.Changes[1])
+	assert.Equal(t, "Faith", st.Changes[2].Subject)
+	ru := h.s.SetLang("ru")
+	assert.Equal(t, "Вера", ru.Changes[2].Subject)
+	h.s.SetLang("en")
 
 	st, err = h.s.Undo()
 	require.NoError(t, err)

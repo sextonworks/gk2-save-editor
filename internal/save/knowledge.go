@@ -16,6 +16,10 @@ func (i Inspiration) Ready() bool {
 	return i.Goal > 0 && i.Current >= i.Goal
 }
 
+func (i Inspiration) CanBringToGoal() bool {
+	return i.Goal > i.Current
+}
+
 type Techs struct {
 	Unlocked []string `json:"unlocked"`
 	Revealed []string `json:"revealed"`
@@ -82,9 +86,13 @@ func (o SetInspirationProgress) Apply(s *Save) error {
 		return err
 	}
 	for _, p := range list.Children {
-		if str(p, "id") == o.ID {
-			return s.setField(p, "currentValue", float64(o.Value))
+		if str(p, "id") != o.ID {
+			continue
 		}
+		if o.Value < integer(p, "currentValue") {
+			return fmt.Errorf("inspiration %s/%s: progress can only go up: %w", o.Talent, o.ID, ErrField)
+		}
+		return s.setField(p, "currentValue", float64(o.Value))
 	}
 	return fmt.Errorf("inspiration %s/%s: %w", o.Talent, o.ID, ErrField)
 }

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "gk2-editor",
+  "outputfilename": "gk2-editor",
+  "frontend:install": "pnpm install --frozen-lockfile",
+  "frontend:build": "pnpm run build",
+  "frontend:dev:watcher": "pnpm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "wailsjsdir": "./frontend/src/lib",
+  "author": {
+    "name": "sextonworks"
+  },
+  "info": {
+    "companyName": "sextonworks",
+    "productName": "GK2 Save Editor",
+    "productVersion": "0.2.0",
+    "copyright": "MIT License",
+    "comments": "Unofficial save editor for Graveyard Keeper 2"
+  }
+}

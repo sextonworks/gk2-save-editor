@@ -38,6 +38,19 @@ func TestUndoRedoReplaysExactly(t *testing.T) {
 	require.ErrorIs(t, e.Redo(), ErrNothingToUndo)
 }
 
+func TestOpsAndOriginal(t *testing.T) {
+	e := editor(t, odintest.DefaultSpec())
+	require.NoError(t, e.Apply(SetResource{Type: "money", Value: 1}))
+	ops := e.Ops()
+	require.Len(t, ops, 1)
+	assert.Equal(t, SetResource{Type: "money", Value: 1}, ops[0])
+	orig, err := e.Original()
+	require.NoError(t, err)
+	v, err := orig.Resource("money")
+	require.NoError(t, err)
+	assert.InDelta(t, 861, v, 1e-6)
+}
+
 func TestApplyAfterUndoDropsRedoTail(t *testing.T) {
 	e := editor(t, odintest.DefaultSpec())
 	require.NoError(t, e.Apply(SetResource{Type: "money", Value: 1}))

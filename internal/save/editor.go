@@ -114,6 +114,16 @@ func (e *Editor) Dirty() bool {
 	return e.cursor != e.saved
 }
 
+func (e *Editor) Ops() []Op {
+	out := make([]Op, e.cursor)
+	copy(out, e.ops[:e.cursor])
+	return out
+}
+
+func (e *Editor) Original() (*Save, error) {
+	return Load(e.path, append([]byte(nil), e.original...))
+}
+
 func (e *Editor) Changes() []string {
 	out := make([]string, 0, e.cursor)
 	for _, op := range e.ops[:e.cursor] {

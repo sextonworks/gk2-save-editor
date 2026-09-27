@@ -64,7 +64,7 @@ type State struct {
 	Dirty       bool      `json:"dirty"`
 	CanUndo     bool      `json:"canUndo"`
 	CanRedo     bool      `json:"canRedo"`
-	Changes     []string  `json:"changes"`
+	Changes     []Change  `json:"changes"`
 	GameRunning bool      `json:"gameRunning"`
 	Conflict    bool      `json:"conflict"`
 }
@@ -81,6 +81,7 @@ type Session struct {
 	slot     string
 	running  bool
 	conflict bool
+	lang     string
 	stop     context.CancelFunc
 	done     chan struct{}
 }
@@ -160,6 +161,13 @@ func (s *Session) slots() []Slot {
 	return out
 }
 
+func (s *Session) SetLang(lang string) State {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.lang = lang
+	return s.stateLocked()
+}
+
 func (s *Session) Environment() Environment {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -198,7 +206,7 @@ func (s *Session) UseFolders(saveDir, gameDir string) (Environment, error) {
 }
 
 func (s *Session) stateLocked() State {
-	st := State{GameRunning: s.running, Conflict: s.conflict, Changes: []string{}}
+	st := State{GameRunning: s.running, Conflict: s.conflict, Changes: []Change{}}
 	if s.editor == nil {
 		return st
 	}
@@ -207,7 +215,7 @@ func (s *Session) stateLocked() State {
 		st.Info = info
 	}
 	st.Dirty, st.CanUndo, st.CanRedo = s.editor.Dirty(), s.editor.CanUndo(), s.editor.CanRedo()
-	st.Changes = s.editor.Changes()
+	st.Changes = s.changes()
 	return st
 }
 
@@ -318,8 +326,24 @@ func (s *Session) Write(ctx context.Context) (WriteResult, error) {
 	return WriteResult{Backup: b.Path, State: s.stateLocked()}, nil
 }
 
-func (s *Session) Backups() ([]store.Backup, error) {
-	return store.New(s.cfg.BackupDir).List()
+type BackupView struct {
+	Name    string   `json:"name"`
+	Created string   `json:"created"`
+	Files   []string `json:"files"`
+	Legacy  bool     `json:"legacy"`
+}
+
+func (s *Session) Backups() ([]BackupView, error) {
+	list, err := store.New(s.cfg.BackupDir).List()
+	if err != nil {
+		return nil, err
+	}
+	out := make([]BackupView, 0, len(list))
+	for i := len(list) - 1; i >= 0; i-- {
+		b := list[i]
+		out = append(out, BackupView{Name: b.Name, Created: b.Created.Format(time.RFC3339), Files: b.Files, Legacy: b.Legacy})
+	}
+	return out, nil
 }
 
 func (s *Session) Restore(ctx context.Context, name string) (State, error) {

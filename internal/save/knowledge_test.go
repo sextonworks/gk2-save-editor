@@ -33,6 +33,10 @@ func TestSetInspirationProgress(t *testing.T) {
 	assert.Equal(t, int64(6), list[2].Current)
 	assert.True(t, list[2].Ready())
 	require.ErrorIs(t, e.Apply(SetInspirationProgress{Talent: "talent_red", ID: "nope", Value: 1}), ErrField)
+	require.ErrorIs(t, e.Apply(SetInspirationProgress{Talent: "talent_red", ID: "insp_red_1", Value: 0}), ErrField)
+	assert.True(t, Inspiration{Current: 1, Goal: 5}.CanBringToGoal())
+	assert.False(t, Inspiration{Current: 22, Goal: 0}.CanBringToGoal())
+	assert.False(t, Inspiration{Current: 5, Goal: 5}.CanBringToGoal())
 	require.ErrorIs(t, e.Apply(SetInspirationProgress{Talent: "talent_x", ID: "insp_red_0", Value: 1}), ErrField)
 	assert.NotEmpty(t, SetInspirationProgress{}.String())
 }

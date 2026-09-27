@@ -39,8 +39,13 @@ type Player struct {
 }
 
 type ZombieView struct {
-	save.Zombie
+	Name        string     `json:"name"`
 	DisplayName string     `json:"displayName"`
+	Type        int64      `json:"type"`
+	Zone        string     `json:"zone"`
+	TechRed     int64      `json:"techRed"`
+	TechBlue    int64      `json:"techBlue"`
+	TechGreen   int64      `json:"techGreen"`
 	Parts       []ItemView `json:"parts"`
 	PerkNames   []string   `json:"perkNames"`
 }
@@ -50,6 +55,7 @@ type InspirationView struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	Ready       bool   `json:"ready"`
+	CanRaise    bool   `json:"canRaise"`
 }
 
 type TechView struct {
@@ -130,7 +136,11 @@ func (s *Session) Zombies(lang string) ([]ZombieView, error) {
 			return err
 		}
 		for _, z := range zombies {
-			v := ZombieView{Zombie: z, DisplayName: s.name(z.Name, lang), Parts: []ItemView{}, PerkNames: []string{}}
+			v := ZombieView{
+				Name: z.Name, DisplayName: s.name(z.Name, lang), Type: z.Type, Zone: z.Zone,
+				TechRed: z.TechRed, TechBlue: z.TechBlue, TechGreen: z.TechGreen,
+				Parts: []ItemView{}, PerkNames: []string{},
+			}
 			for _, p := range z.BodyParts {
 				v.Parts = append(v.Parts, ItemView{UniqueID: p.UniqueID, ID: p.ID, Name: s.name(p.ID, lang), Count: p.Count})
 			}
@@ -152,7 +162,7 @@ func (s *Session) Inspirations(lang string) ([]InspirationView, error) {
 			return err
 		}
 		for _, i := range list {
-			v := InspirationView{Inspiration: i, Name: s.baseName(i.ID, lang), Ready: i.Ready()}
+			v := InspirationView{Inspiration: i, Name: s.baseName(i.ID, lang), Ready: i.Ready(), CanRaise: i.CanBringToGoal()}
 			if s.catalog != nil {
 				v.Description = s.catalog.Description(i.ID, lang)
 			}
@@ -248,7 +258,7 @@ func (s *Session) Inspire(talent, id string) (State, error) {
 			return err
 		}
 		for _, i := range list {
-			if (talent == "" || i.Talent == talent) && (id == "" || i.ID == id) && !i.Ready() {
+			if (talent == "" || i.Talent == talent) && (id == "" || i.ID == id) && i.CanBringToGoal() {
 				ops = append(ops, save.SetInspirationProgress{Talent: i.Talent, ID: i.ID, Value: i.Goal})
 			}
 		}

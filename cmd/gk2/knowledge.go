@@ -87,7 +87,7 @@ func (a *inspireCmd) Run(c *cli, g *globals) error {
 				continue
 			}
 			matched++
-			if i.Ready() {
+			if !i.CanBringToGoal() {
 				continue
 			}
 			if err := e.Apply(save.SetInspirationProgress{Talent: i.Talent, ID: i.ID, Value: i.Goal}); err != nil {
