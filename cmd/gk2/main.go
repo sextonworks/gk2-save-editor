@@ -13,6 +13,7 @@ import (
 
 	"github.com/alecthomas/kong"
 
+	"github.com/sextonworks/gk2-save-editor/internal/gamedata"
 	"github.com/sextonworks/gk2-save-editor/internal/locate"
 	"github.com/sextonworks/gk2-save-editor/internal/save"
 )
@@ -25,6 +26,7 @@ type globals struct {
 	env     locate.Env
 	running func(context.Context) (bool, error)
 	sleep   func(context.Context, time.Duration) error
+	catalog *gamedata.Catalog
 }
 
 type cli struct {
@@ -35,6 +37,8 @@ type cli struct {
 	DryRun    bool             `short:"n" help:"Show changes without writing."`
 	Wait      bool             `short:"w" help:"Wait until the game is closed before editing."`
 	BackupDir string           `help:"Backup folder (default: user data folder, or GK2_DATA_DIR/backups)." type:"path"`
+	CacheDir  string           `help:"Cache folder for game data (default: user cache folder, or GK2_CACHE_DIR)." type:"path"`
+	Lang      string           `default:"en" enum:"en,ru,zh_cn" help:"Language for item names: en, ru, zh_cn."`
 	Version   kong.VersionFlag `help:"Show version and exit."`
 
 	Info    infoCmd    `cmd:"" help:"Save summary: day, money, backpack, zombies, game status."`
@@ -44,6 +48,7 @@ type cli struct {
 	Talents talentsCmd `cmd:"" help:"Show talent branches: level, exp, free points."`
 	Zombies zombiesCmd `cmd:"" help:"List the player's zombies."`
 	Paths   pathsCmd   `cmd:"" help:"Show the folders gk2 uses."`
+	Find    findCmd    `cmd:"" help:"Search items (or every id with --all) by id or name."`
 
 	Add        addCmd        `cmd:"" help:"Add new stacks: gk2 add candle_basic=5 heal_potion"`
 	Count      countCmd      `cmd:"" help:"Set the count of an existing stack."`

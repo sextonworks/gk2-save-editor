@@ -160,8 +160,13 @@ func stacksOf(e *save.Editor, c save.Container, id string, all bool, g *globals)
 	return found, nil
 }
 
+type checkFlag struct {
+	Check bool `default:"true" negatable:"" help:"Refuse ids that are not in the game data (needs the game folder)."`
+}
+
 type addCmd struct {
 	whereFlag
+	checkFlag
 	Items []string `arg:"" help:"Item ids, optionally id=count (candle_basic=5)."`
 }
 
@@ -182,12 +187,19 @@ func parseSpec(spec string) (string, int64, error) {
 
 func (a *addCmd) Run(c *cli, g *globals) error {
 	ops := make([]save.Op, 0, len(a.Items))
+	ids := make([]string, 0, len(a.Items))
 	for _, spec := range a.Items {
 		id, n, err := parseSpec(spec)
 		if err != nil {
 			return err
 		}
+		ids = append(ids, id)
 		ops = append(ops, save.NewAddItem(save.Container(a.Where), id, n))
+	}
+	if a.Check {
+		if err := c.requireKnown(g, ids...); err != nil {
+			return fmt.Errorf("add: %w", err)
+		}
 	}
 	return c.edit(g, func(e *save.Editor) error {
 		for _, op := range ops {
@@ -227,11 +239,17 @@ func (a *removeCmd) Run(c *cli, g *globals) error {
 type swapCmd struct {
 	whereFlag
 	allFlag
+	checkFlag
 	Old string `arg:"" help:"Current item id."`
 	New string `arg:"" help:"New item id."`
 }
 
 func (a *swapCmd) Run(c *cli, g *globals) error {
+	if a.Check {
+		if err := c.requireKnown(g, a.New); err != nil {
+			return fmt.Errorf("swap: %w", err)
+		}
+	}
 	return c.editStacks(g, "swap", save.Container(a.Where), []string{a.Old}, a.All, func(st save.Stack) save.Op {
 		return save.SetItemID{Container: save.Container(a.Where), UniqueID: st.UniqueID, ItemID: a.New}
 	})

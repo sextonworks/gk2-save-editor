@@ -108,9 +108,16 @@ func listContainer(root *cli, g *globals, j jsonFlag, c save.Container) error {
 	if err != nil {
 		return fmt.Errorf("list %s: %w", c, err)
 	}
+	cat, _ := root.catalog(g, false)
 	return emit(g, j, items, func(w io.Writer) {
 		for _, it := range items {
-			fmt.Fprintf(w, "%6d  %s\n", it.Count, it.ID)
+			name := ""
+			if cat != nil {
+				if n := cat.Name(it.ID, root.Lang); n != it.ID {
+					name = "  " + n
+				}
+			}
+			fmt.Fprintf(w, "%6d  %-28s%s\n", it.Count, it.ID, name)
 		}
 	})
 }

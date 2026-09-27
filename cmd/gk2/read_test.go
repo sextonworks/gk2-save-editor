@@ -26,6 +26,9 @@ func fixture(t *testing.T) string {
 
 func invoke(t *testing.T, running bool, args ...string) (string, error) {
 	t.Helper()
+	if len(args) > 0 {
+		args = append([]string{"--game-dir", t.TempDir(), "--cache-dir", t.TempDir()}, args...)
+	}
 	var out bytes.Buffer
 	g := globals{
 		env:     locate.System(),

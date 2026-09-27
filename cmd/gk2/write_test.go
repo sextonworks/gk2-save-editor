@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/sextonworks/gk2-save-editor/internal/gamedata/gamedatatest"
 	"github.com/sextonworks/gk2-save-editor/internal/locate"
 	"github.com/sextonworks/gk2-save-editor/internal/save"
 )
@@ -19,13 +20,18 @@ import (
 type writeEnv struct {
 	dir     string
 	backups string
+	game    string
+	cache   string
 	running []bool
 	slept   []time.Duration
 }
 
 func newWriteEnv(t *testing.T) *writeEnv {
 	t.Helper()
-	return &writeEnv{dir: fixture(t), backups: filepath.Join(t.TempDir(), "backups")}
+	game := t.TempDir()
+	require.NoError(t, gamedatatest.Write(game, []string{"salt", "heal_potion", "candle_basic", "candle_master"}, []string{"tech_red"},
+		map[string]map[string]string{"en": {"candle_basic": "Simple Candle"}, "ru": {"candle_basic": "Простая свеча"}}))
+	return &writeEnv{dir: fixture(t), backups: filepath.Join(t.TempDir(), "backups"), game: game, cache: t.TempDir()}
 }
 
 func (w *writeEnv) run(t *testing.T, args ...string) (string, error) {
@@ -46,7 +52,7 @@ func (w *writeEnv) run(t *testing.T, args ...string) (string, error) {
 			return nil
 		},
 	}
-	full := append([]string{"--save-dir", w.dir, "--backup-dir", w.backups}, args...)
+	full := append([]string{"--save-dir", w.dir, "--backup-dir", w.backups, "--game-dir", w.game, "--cache-dir", w.cache}, args...)
 	err := run(context.Background(), full, &out, g)
 	return out.String(), err
 }
@@ -217,8 +223,42 @@ func TestExplicitSaveSkipsGameCheck(t *testing.T) {
 	w.running = []bool{true}
 	var out bytes.Buffer
 	g := globals{env: locate.System(), running: func(context.Context) (bool, error) { return true, nil }, sleep: sleep}
-	err := run(context.Background(), []string{"--save", filepath.Join(w.dir, "Steam_1.dat"), "--backup-dir", w.backups, "money", "7"}, &out, g)
+	err := run(context.Background(), []string{"--save", filepath.Join(w.dir, "Steam_1.dat"), "--backup-dir", w.backups, "--game-dir", w.game, "--cache-dir", w.cache, "money", "7"}, &out, g)
 	require.NoError(t, err, out.String())
+}
+
+func TestIDCheckAndFind(t *testing.T) {
+	w := newWriteEnv(t)
+	_, err := w.run(t, "add", "not_an_item")
+	require.ErrorIs(t, err, errUnknownID)
+	_, err = w.run(t, "swap", "salt", "not_an_item")
+	require.ErrorIs(t, err, errUnknownID)
+	out, err := w.run(t, "add", "--no-check", "not_an_item")
+	require.NoError(t, err, out)
+
+	out, err = w.run(t, "--lang", "ru", "find", "свеч")
+	require.NoError(t, err)
+	assert.Contains(t, out, "candle_basic")
+	assert.Contains(t, out, "Простая свеча")
+	out, err = w.run(t, "find", "tech")
+	require.NoError(t, err)
+	assert.Contains(t, out, "Nothing found.")
+	out, err = w.run(t, "find", "--all", "tech")
+	require.NoError(t, err)
+	assert.Contains(t, out, "tech_red")
+
+	_, err = w.run(t, "--game-dir", t.TempDir(), "add", "salt")
+	require.ErrorIs(t, err, locate.ErrNotFound)
+}
+
+func TestBagShowsNames(t *testing.T) {
+	w := newWriteEnv(t)
+	_, err := w.run(t, "add", "candle_basic")
+	require.NoError(t, err)
+	out, err := w.run(t, "--lang", "ru", "bag")
+	require.NoError(t, err)
+	assert.Contains(t, out, "candle_basic")
+	assert.Contains(t, out, "Простая свеча")
 }
 
 func TestSleepHonoursContext(t *testing.T) {
