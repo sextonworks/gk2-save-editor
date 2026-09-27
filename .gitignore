@@ -7,3 +7,8 @@ dist/
 build/
 *.dat
 *.info
+/gk2
+/gk2.exe
+cmd/gk2/gk2
+cmd/gk2/gk2.exe
+/bin/

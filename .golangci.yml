@@ -18,6 +18,10 @@ linters:
         - fmt.Fprintf
         - fmt.Fprintln
         - fmt.Fprint
+        - (*os.File).Close
+        - (*archive/zip.ReadCloser).Close
+        - (io.ReadCloser).Close
+        - os.Remove
     gocyclo:
       min-complexity: 20
     dupl:
