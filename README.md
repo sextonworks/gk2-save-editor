@@ -18,7 +18,8 @@ It ships no game files or game art.
 zone), zombies, inspirations, technologies, a read-only inspector of every save field, and backups.
 Changes pile up in a journal on the right: undo and redo them, then press Save to write the file and a backup.
 
-Release builds of the desktop editor are not published yet. To build it from source you need Go 1.27,
+Download `gk2-editor` for your platform from [Releases](https://github.com/sextonworks/gk2-save-editor/releases):
+Windows x64, macOS (Apple Silicon and Intel) and Linux (x64 and arm64). To build it from source you need Go 1.27,
 Node 24 with pnpm, and the Wails CLI:
 
 ```bash
@@ -68,6 +69,28 @@ gk2 restore 20260926_170215               # restore one (the current save is bac
 Global options: `--slot Steam_2` for another slot, `--save path/to/file.dat` for any file,
 `-n` dry run, `-w` wait for the game to close, `--lang ru` or `--lang zh_cn` for item names.
 Chests are edited in the desktop editor only.
+
+## Verify a download
+
+Every file in a release is built by this repository's GitHub Actions workflow and signed with
+[Sigstore](https://www.sigstore.dev/): no private key is kept anywhere, the signature is tied to the workflow run.
+Check a file with the GitHub CLI:
+
+```bash
+gh attestation verify gk2-editor-v0.2.0-windows-amd64.zip --repo sextonworks/gk2-save-editor
+```
+
+Or check the checksum list with [cosign](https://docs.sigstore.dev/cosign/system_config/installation/)
+and then the file against it:
+
+```bash
+cosign verify-blob SHA256SUMS --bundle SHA256SUMS.sigstore.json \
+  --certificate-identity-regexp '^https://github.com/sextonworks/gk2-save-editor/\.github/workflows/release\.yml@refs/tags/v' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+sha256sum --check --ignore-missing SHA256SUMS
+```
+
+The apps are not signed with an Apple or Microsoft certificate, so macOS and Windows warn on the first start.
 
 ## Where it looks for files
 

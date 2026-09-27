@@ -9,6 +9,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 env:
   VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}
@@ -60,14 +62,10 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
-      - uses: pnpm/action-setup@v6.1.0
-        with:
-          package_json_file: cmd/gk2-editor/frontend/package.json
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-          cache: pnpm
-          cache-dependency-path: cmd/gk2-editor/frontend/pnpm-lock.yaml
+      - run: npm install -g pnpm@11.9.0
       - name: Install WebKitGTK
         if: matrix.os == 'linux'
         run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
@@ -105,6 +103,12 @@ jobs:
           path: dist
           merge-multiple: true
       - run: cd dist && sha256sum * > SHA256SUMS && ls -l
+      - uses: actions/attest-build-provenance@v4.2.2
+        with:
+          subject-path: dist/*
+      - uses: sigstore/cosign-installer@v4.1.2
+      - name: Sign checksums
+        run: cosign sign-blob --yes --bundle dist/SHA256SUMS.sigstore.json dist/SHA256SUMS
       - name: Create GitHub release
         if: github.ref_type == 'tag'
         env:
